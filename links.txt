@@ -1,0 +1,2 @@
+Repo Efficient Deep Learning for Sterep Matching - https://bitbucket.org/saakuraa/cvpr16_stereo_public/src/master/
+Repo Stereo Matching by Training a Convolutional Neural - https://github.com/jzbontar/mc-cnn
