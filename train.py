@@ -1,8 +1,6 @@
 import argparse
 import os
 
-from keras.layers import BatchNormalization, Conv2D
-from keras.models import Sequential
 from keras.optimizers import Adam
 
 from data_handler import DataHandler
@@ -17,14 +15,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--data_root')
 args = parser.parse_args()
 
-
-def build_network():
-    model = Sequential()
-    for i in range(9):
-        model.add(Conv2D(64, 3, activation='relu'))
-        model.add(BatchNormalization())
-
-    return model
 
 data_loader = DataHandler(
     batch_size=batch_size,
