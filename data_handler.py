@@ -5,18 +5,19 @@ from scipy.misc import imread
 
 
 class DataHandler(object):
-    def __init__(self, batch_size, data_version, util_root, data_root, filename, num_tr_img, num_val_img):
+    def __init__(self, batch_size, data_version, util_root, data_root, filename):
         self.batch_size = batch_size
         self.data_version = data_version
         self.util_root = util_root
         self.data_root = data_root
         self.filename =filename
-        self.num_tr_img = num_tr_img
-        self.num_val_img = num_val_img
         self.num_channels = 3 if self.data_version == "kitti2015" else 1
 
         fn = filename.split("_")
         fn[-1] = fn[-1].split(".")[0]
+        self.num_tr_img = fn[1]
+        self.num_val_img = fn[2]
+        self.num_val_loc = fn[3]
         data_split, _, psz, half_range = [fn[0]] + [int(x) for x in fn[1:]]
         self.data_split = data_split
         self.half_range = half_range
@@ -47,7 +48,7 @@ class DataHandler(object):
 
         self.init_input_batches()
         if self.data_split == "val":
-            self.pixel_loc = self.pixel_loc[:selfnum_val_loc]
+            self.pixel_loc = self.pixel_loc[:self.num_val_loc]
 
     def preprocess_image(self, im):
         im -= im.mean(axis=(0, 1))

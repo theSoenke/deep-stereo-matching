@@ -22,9 +22,7 @@ data_loader = DataHandler(
     data_version='kitti2015',
     util_root='./preprocess/debug_15/',
     data_root=args.data_root,
-    filename='tr_160_18_100.bin',
-    num_tr_img=160,
-    num_val_img=40,
+    filename='tr_40_18_100.bin',
 )
 data_loader.load()
 
