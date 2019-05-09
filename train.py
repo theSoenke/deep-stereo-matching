@@ -1,6 +1,7 @@
 import argparse
 import os
 
+from keras.callbacks import ModelCheckpoint
 from keras.optimizers import Adam
 
 from data_handler import DataHandler
@@ -29,10 +30,11 @@ data_loader.load()
 
 model = build_model(left_input_shape=data_loader.l_psz, right_input_shape=data_loader.r_psz)
 train_samples = data_loader.pixel_loc.shape[0]
-
+checkpoints = ModelCheckpoint('./checkpoints', monitor='accuracy', verbose=1, save_best_only=True, mode='max')
 model.compile(loss="categorical_crossentropy", optimizer=Adam(lr=learning_rate), metrics=["accuracy"])
 model.fit_generator(
     generator=data_loader.generator,
-    steps_per_epoch=train_samples // batch_size,
+    steps_per_epoch=(train_samples // batch_size) // 10,
+    callbacks=[checkpoints],
     epochs=10,
 )
