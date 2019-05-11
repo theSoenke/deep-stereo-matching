@@ -1,6 +1,8 @@
 import argparse
 import os
 
+import tensorflow as tf
+from keras.backend.tensorflow_backend import set_session
 from keras.callbacks import ModelCheckpoint
 from keras.optimizers import Adam
 
@@ -10,7 +12,7 @@ from model import build_model
 epochs = 10
 learning_rate = 1e-3
 batch_size = 64
-checkpoint_path = './checkpoints/best_acc.h5'
+checkpoint_path = './checkpoints_best_acc.h5'
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--data_root')
@@ -25,6 +27,11 @@ data_loader = DataHandler(
     filename='tr_40_18_100.bin',
 )
 data_loader.load()
+
+config = tf.ConfigProto()
+config.gpu_options.allow_growth = True
+session = tf.Session(config=config)
+set_session(session)
 
 checkpoints = ModelCheckpoint(checkpoint_path, monitor='acc', verbose=1, save_best_only=True, mode='max')
 model = build_model(left_input_shape=data_loader.l_psz, right_input_shape=data_loader.r_psz)

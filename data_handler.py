@@ -10,7 +10,7 @@ class DataHandler(object):
         self.data_version = data_version
         self.util_root = util_root
         self.data_root = data_root
-        self.filename =filename
+        self.filename = filename
         self.num_channels = 3 if self.data_version == "kitti2015" else 1
 
         fn = filename.split("_")
