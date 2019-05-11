@@ -15,9 +15,9 @@ class DataHandler(object):
 
         fn = filename.split("_")
         fn[-1] = fn[-1].split(".")[0]
-        self.num_tr_img = fn[1]
-        self.num_val_img = fn[2]
-        self.num_val_loc = fn[3]
+        self.num_tr_img = int(fn[1])
+        self.num_val_img = int(fn[2])
+        self.num_val_loc = int(fn[3])
         data_split, _, psz, half_range = [fn[0]] + [int(x) for x in fn[1:]]
         self.data_split = data_split
         self.half_range = half_range
