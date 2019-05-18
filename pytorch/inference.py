@@ -11,7 +11,7 @@ from torchvision import transforms
 from model import Model
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--dataset", type=str, default='../data/training')
+parser.add_argument("--data", type=str, default='../data/training')
 parser.add_argument("--checkpoint", type=str, default='./checkpoint.pkl')
 parser.add_argument("--img_num", type=int, default=0)
 parser.add_argument("--disp_range", type=int, default=128)
@@ -19,8 +19,8 @@ args = parser.parse_args()
 
 
 def load_sample(img_num):
-    left_image = Image.open(os.path.join(args.dataset, 'image_2/%06d_10.png' % (img_num)))
-    right_image = Image.open(os.path.join(args.dataset, 'image_3/%06d_10.png' % (img_num)))
+    left_image = Image.open(os.path.join(args.data, 'image_2/%06d_10.png' % (img_num)))
+    right_image = Image.open(os.path.join(args.data, 'image_3/%06d_10.png' % (img_num)))
     left_image = np.array(left_image)
     right_image = np.array(right_image)
     left_image = 255 * transforms.ToTensor()(left_image)
