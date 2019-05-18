@@ -37,7 +37,7 @@ def three_pixel_loss(pred, target, weights):
         loss = torch.mul(pred_compare, weights).sum()
         error = error - loss
 
-    return error
+    return error / pred.size(0)
 
 def three_pixel_accuracy(pred, target):
     acc = 0
