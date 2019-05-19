@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from torch import nn, optim
 from torch.functional import F
+from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
@@ -27,10 +28,11 @@ epochs = args.epochs
 checkpoint = args.checkpoint
 
 torch.manual_seed(42)
+np.random.seed(42)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
-def three_pixel_loss(pred, target, weights):
+def loss_function(pred, target, weights):
     error = 0
     for i in range(pred.size(0)):
         pred_compare = pred[i, target[i][0]-2:target[i][0]+2+1]
@@ -39,20 +41,21 @@ def three_pixel_loss(pred, target, weights):
 
     return error / pred.size(0)
 
-def three_pixel_accuracy(pred, target):
-    acc = 0
-    for i in range(pred.size(0)):
-        sc = pred[i, target[i][0]-2:target[i][0]+2+1]
-        acc -= sc.sum()
 
-    return 1 - ((acc / pred.size(0)).item() / 100)
+def pixel_accuracy(pred, target, pixel=3):
+    pred, _ = pred.max(dim=1)
+    pred = pred.abs()
+    return pred[pred <= pixel].shape[0] / pred.size(0)
+
 
 writer = SummaryWriter()
 model = Model(3, half_range*2+1).to(device)
 if os.path.exists(checkpoint):
+    print("Loading checkpoint")
     model.load_state_dict(torch.load(checkpoint))
 
 optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+scheduler = MultiStepLR(optimizer, [24000, 32000, 40000], gamma=0.2)
 dataset = StereoDataset(
     util_root='../preprocess/debug_15/',
     data_root=args.data,
@@ -69,6 +72,7 @@ for epoch in range(epochs):
     targets = np.tile(half_range, (batch_size, 1))
     target_batch = torch.tensor(targets, dtype=torch.int32)
     losses = np.array([])
+    accuracies = np.array([])
     for batch in train_data:
         start_time = time.time()
         i += 1
@@ -78,17 +82,23 @@ for epoch in range(epochs):
         target = target_batch.to(device)
 
         _, _, pred = model(left_img, right_img)
-        loss = three_pixel_loss(pred, target, class_weights)
+        loss = loss_function(pred, target, class_weights)
         loss.backward()
         optimizer.step()
+        scheduler.step()
         optimizer.zero_grad()
 
+        acc = pixel_accuracy(pred, target, pixel=2)
         losses = np.append(losses, loss.item())
+        accuracies = np.append(accuracies, acc)
         writer.add_scalar("train_loss", loss, global_step=i)
+        writer.add_scalar("train_acc", acc, global_step=i)
+        writer.add_scalar("learning_rate", scheduler.get_lr()[0], global_step=i)
         if i % 50 == 0:
             avg_time = ((time.time() - start_time) * 1000) / 50
-            print("%d/%d samples, Avg. loss: %f, Time per batch: %fms" % ((batch_size * i), samples, np.mean(losses), avg_time))
+            print("%d/%d samples, Accuracy: %f, Train loss: %f, Time per batch: %fms" % ((batch_size * i), samples, np.mean(accuracies), np.mean(losses), avg_time))
             losses = np.array([])
+            accuracies = np.array([])
 
         if i % 500 == 0:
             torch.save(model.state_dict(), checkpoint)
@@ -96,4 +106,5 @@ for epoch in range(epochs):
 
 
     print("Finished epoch %d" % epoch)
-    torch.save(model.state_dict(), checkpoint)
+
+torch.save(model.state_dict(), checkpoint)
