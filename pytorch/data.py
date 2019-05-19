@@ -10,23 +10,22 @@ from torch.utils.data import Dataset
 
 
 class StereoDataset(Dataset):
-    def __init__(self, util_root, data_root, filename):
+    def __init__(self, util_root, data_root, filename, num_val_loc=100, max_samples=-1):
         self.util_root = util_root
         self.data_root = data_root
         self.filename = filename
-        self.num_channels = 3
+        self.num_val_loc = num_val_loc
+        self.max_samples = max_samples
 
         fn = filename.split("_")
         fn[-1] = fn[-1].split(".")[0]
-        self.num_tr_img = int(fn[1])
-        self.num_val_img = int(fn[2])
-        self.num_val_loc = int(fn[3])
-        data_split, _, psz, half_range = [fn[0]] + [int(x) for x in fn[1:]]
+        data_split, num_images, psz, half_range = [fn[0]] + [int(x) for x in fn[1:]]
+        self.num_images = num_images
         self.data_split = data_split
         self.half_range = half_range
         self.psz = psz
 
-        print("Loading data..")
+        print("Loading dataset..")
         self.load()
 
 
@@ -55,12 +54,13 @@ class StereoDataset(Dataset):
         data_path = os.path.join(self.util_root, self.filename)
         self.pixel_loc = np.fromfile(data_path, '<f4').reshape(-1, 5).astype(np.int)
         self.pixel_loc[:, 2:5] = self.pixel_loc[:, 2:5] - 1
+        self.pixel_loc = self.pixel_loc[:self.max_samples]
         if shuffle:
             np.random.shuffle(self.pixel_loc)
 
         self.ldata, self.rdata = {}, {}
-        num_images = self.num_tr_img + self.num_val_img
-        for idx in range(num_images):
+        # TODO only load train or val samples
+        for idx in range(len(self.file_ids)):
             fn = self.file_ids[idx]
             self.ldata[fn], self.rdata[fn] = self.load_sample(fn)
 

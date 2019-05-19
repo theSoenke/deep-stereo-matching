@@ -54,28 +54,36 @@ if os.path.exists(checkpoint):
     print("Loading checkpoint")
     model.load_state_dict(torch.load(checkpoint))
 
-optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+optimizer = optim.Adagrad(model.parameters(), lr=learning_rate, weight_decay=0.0005)
 scheduler = MultiStepLR(optimizer, [24000, 32000, 40000], gamma=0.2)
-dataset = StereoDataset(
+train_dataset = StereoDataset(
     util_root='../preprocess/debug_15/',
     data_root=args.data,
     filename='tr_160_18_100.bin',
+    max_samples= 40000 * 128,
+)
+val_dataset = StereoDataset(
+    util_root='../preprocess/debug_15/',
+    data_root=args.data,
+    filename='val_40_18_100.bin',
 )
 
-train_data = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+val_data = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
 class_weights = torch.Tensor([1, 4, 10, 4, 1]).to(device)
-samples = len(dataset)
+samples = len(train_dataset)
+targets = np.tile(half_range, (batch_size, 1))
+target_batch = torch.tensor(targets, dtype=torch.int32)
 
-i = 0
-for epoch in range(epochs):
-    model.train()
-    targets = np.tile(half_range, (batch_size, 1))
-    target_batch = torch.tensor(targets, dtype=torch.int32)
+
+def train(epoch):
     losses = np.array([])
     accuracies = np.array([])
+
+    step = epoch * samples
     for batch in train_data:
         start_time = time.time()
-        i += 1
+        step += 1
 
         left_img = batch['left'].to(device)
         right_img = batch['right'].to(device)
@@ -91,19 +99,51 @@ for epoch in range(epochs):
         acc = pixel_accuracy(pred, target, pixel=2)
         losses = np.append(losses, loss.item())
         accuracies = np.append(accuracies, acc)
-        writer.add_scalar("train_loss", loss, global_step=i)
-        writer.add_scalar("train_acc", acc, global_step=i)
-        writer.add_scalar("learning_rate", scheduler.get_lr()[0], global_step=i)
-        if i % 50 == 0:
+        writer.add_scalar("train_loss", loss, global_step=step)
+        writer.add_scalar("train_acc", acc, global_step=step)
+        writer.add_scalar("learning_rate", scheduler.get_lr()[0], global_step=step)
+        if step % 50 == 0:
             avg_time = ((time.time() - start_time) * 1000) / 50
-            print("%d/%d samples, Accuracy: %f, Train loss: %f, Time per batch: %fms" % ((batch_size * i), samples, np.mean(accuracies), np.mean(losses), avg_time))
+            epoch_samples = (batch_size * (step // (epoch + 1)))
+            print("%d/%d samples, train_acc: %f, train_loss: %f, Time per batch: %fms" % (epoch_samples, samples, np.mean(accuracies), np.mean(losses), avg_time))
             losses = np.array([])
             accuracies = np.array([])
 
-        if i % 500 == 0:
+        if step % 500 == 0:
             torch.save(model.state_dict(), checkpoint)
             print("Created checkpoint")
 
+
+def evaluate(epoch):
+    losses = np.array([])
+    accuracies = np.array([])
+    for batch in val_data:
+        left_img = batch['left'].to(device)
+        right_img = batch['right'].to(device)
+        target = target_batch.to(device)
+
+        _, _, pred = model(left_img, right_img)
+        loss = loss_function(pred, target, class_weights)
+        optimizer.zero_grad()
+
+        acc = pixel_accuracy(pred, target, pixel=2)
+        losses = np.append(losses, loss.item())
+        accuracies = np.append(accuracies, acc)
+
+    step = (epoch + 1) * samples
+    avg_loss = np.mean(losses)
+    avg_acc = np.mean(accuracies)
+    writer.add_scalar("val_loss", avg_loss, global_step=step)
+    writer.add_scalar("val_acc", avg_acc, global_step=step)
+    print("Evaluation: val_acc: %f, val_loss: %f" % (avg_acc, avg_loss))
+
+
+for epoch in range(epochs):
+    model.train()
+    train(epoch)
+
+    model.eval()
+    evaluate(epoch)
 
     print("Finished epoch %d" % epoch)
 
