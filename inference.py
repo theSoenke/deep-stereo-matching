@@ -11,8 +11,8 @@ from torchvision import transforms
 from model import Model
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--data", type=str, default='../data/training')
-parser.add_argument("--checkpoint", type=str, default='./checkpoint.pkl')
+parser.add_argument("--data", type=str, default='data/training')
+parser.add_argument("--checkpoint", type=str, default='checkpoint.pkl')
 parser.add_argument("--img_num", type=int, default=0)
 parser.add_argument("--disp_range", type=int, default=128)
 args = parser.parse_args()

@@ -77,3 +77,4 @@ fabric.properties
 *.h5
 *.pkl
 runs/
+data/

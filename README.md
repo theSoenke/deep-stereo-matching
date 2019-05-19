@@ -9,4 +9,8 @@
 
 ## Train
 
-    python3 train.py --data_root /data/kitti2015/training
+    python3 train.py --data /data/kitti2015/training
+
+## Inference
+
+    python3 inference --data /data/kitti2015/testing --img_num 0

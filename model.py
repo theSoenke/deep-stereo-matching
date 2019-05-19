@@ -1,34 +1,111 @@
-import abc
-
-from keras.backend import permute_dimensions, squeeze, batch_dot
-from keras.layers import Activation, BatchNormalization, Conv2D, Input, Lambda
-from keras.models import Model, Sequential
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
 
 
-def correlation_layer(x):
-    lbranch, rbranch = squeeze(x[0], 1), squeeze(x[1], 1)
-    rbranch = permute_dimensions(rbranch, (0, 2, 1))
-    out_tensor = squeeze(batch_dot(lbranch, rbranch), 1)
-    return out_tensor
+class Model(nn.Module):
+    def __init__(self, num_channels, p_size=0, kernel_size=5):
+        super(Model, self).__init__()
+        self.p_size = p_size
+        self.conv1 = nn.Conv2d(num_channels, 32, kernel_size)
+        self.batchnorm1 = nn.BatchNorm2d(32, 1e-3)
+
+        self.conv2 = nn.Conv2d(32, 32, kernel_size)
+        self.batchnorm2 = nn.BatchNorm2d(32, 1e-3)
+
+        self.conv3 = nn.Conv2d(32, 64, kernel_size)
+        self.batchnorm3 = nn.BatchNorm2d(64, 1e-3)
+
+        self.conv4 = nn.Conv2d(64, 64, kernel_size)
+        self.batchnorm4 = nn.BatchNorm2d(64, 1e-3)
+
+        self.conv5 = nn.Conv2d(64, 64, kernel_size)
+        self.batchnorm5 = nn.BatchNorm2d(64, 1e-3)
+
+        self.conv6 = nn.Conv2d(64, 64, kernel_size)
+        self.batchnorm6 = nn.BatchNorm2d(64, 1e-3)
+
+        self.conv7 = nn.Conv2d(64, 64, kernel_size)
+        self.batchnorm7 = nn.BatchNorm2d(64, 1e-3)
+
+        self.conv8 = nn.Conv2d(64, 64, kernel_size)
+        self.batchnorm8 = nn.BatchNorm2d(64, 1e-3)
+
+        self.conv9 = nn.Conv2d(64, 64, kernel_size)
+        self.batchnorm9 = nn.BatchNorm2d(64, 1e-3)
+        self.logsoftmax = nn.LogSoftmax(dim=1)
+
+    def forward_pass(self, x):
+        x = self.conv1(x)
+        x = F.relu(self.batchnorm1(x))
+
+        x = self.conv2(x)
+        x = F.relu(self.batchnorm2(x))
+
+        x = self.conv3(x)
+        x = F.relu(self.batchnorm3(x))
+
+        x = self.conv4(x)
+        x = F.relu(self.batchnorm4(x))
+
+        x = self.conv5(x)
+        x = F.relu(self.batchnorm5(x))
+
+        x = self.conv6(x)
+        x = F.relu(self.batchnorm6(x))
+
+        x = self.conv7(x)
+        x = F.relu(self.batchnorm7(x))
+
+        x = self.conv8(x)
+        x = F.relu(self.batchnorm8(x))
+
+        x = self.conv9(x)
+        x = self.batchnorm9(x)
+        return x
 
 
-def build_branch(kernel_size, num_layers):
-    model = Sequential()
-    for i in range(num_layers):
-        model.add(Conv2D(64, kernel_size, activation='relu'))
-        model.add(BatchNormalization())
-    model.add(Activation('softmax'))
-    return model
+    def forward(self, left_patch, right_patch):
+        left_patch = self.forward_pass(left_patch)  # Left patch of size 37x37
+        left_patch = left_patch.view(left_patch.size(0), 1, 64)
+
+        right_patch = self.forward_pass(right_patch)  # Right patch of size 37x237
+        right_patch = right_patch.squeeze().view(right_patch.size(0), 64, self.p_size)
+
+        pred = left_patch.bmm(right_patch).view(right_patch.size(0), self.p_size)
+        pred = self.logsoftmax(pred)
+
+        return left_patch, right_patch, pred
 
 
-def build_model(left_input_shape, right_input_shape):
-    input_left = Input(left_input_shape)
-    input_right = Input(right_input_shape)
+    def predict(self, x):
+        with torch.no_grad():
+            x = nn.ReflectionPad2d(18)(x)
+            x = self.conv1(x)
+            x = F.relu(self.batchnorm1(x))
 
-    base_branch = build_branch(kernel_size=(5, 5), num_layers=9)
-    out_left = base_branch(input_left)
-    out_right = base_branch(input_right)
+            x = self.conv2(x)
+            x = F.relu(self.batchnorm2(x))
 
-    out = [Lambda(correlation_layer)([out_left, out_right])]
-    model = Model(inputs=[input_left, input_right], outputs=out)
-    return model
+            x = self.conv3(x)
+            x = F.relu(self.batchnorm3(x))
+
+            x = self.conv4(x)
+            x = F.relu(self.batchnorm4(x))
+
+            x = self.conv5(x)
+            x = F.relu(self.batchnorm5(x))
+
+            x = self.conv6(x)
+            x = F.relu(self.batchnorm6(x))
+
+            x = self.conv7(x)
+            x = F.relu(self.batchnorm7(x))
+
+            x = self.conv8(x)
+            x = F.relu(self.batchnorm8(x))
+
+            x = self.conv9(x)
+            x = self.batchnorm9(x)
+
+        return x
