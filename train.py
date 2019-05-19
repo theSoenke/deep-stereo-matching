@@ -67,10 +67,11 @@ val_dataset = StereoDataset(
     util_root=args.preprocess,
     data_root=args.data,
     filename='val_40_18_100.bin',
+    num_val_loc=256,
 )
 
-train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-val_data = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+val_data = DataLoader(val_dataset, batch_size=batch_size * 2, shuffle=False, num_workers=4)
 class_weights = torch.Tensor([1, 4, 10, 4, 1]).to(device)
 samples = len(train_dataset)
 targets = np.tile(half_range, (batch_size, 1))
