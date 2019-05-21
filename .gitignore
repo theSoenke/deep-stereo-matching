@@ -75,6 +75,5 @@ fabric.properties
 
 .ipynb_checkpoints/
 *.h5
-*.pkl
 runs/
 data/
