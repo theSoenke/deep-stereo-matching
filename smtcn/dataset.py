@@ -1,0 +1,83 @@
+import imageio
+import numpy as np
+import numpy.random as rng
+from torch.autograd import Variable
+
+import torch
+from torch.utils.data.dataset import Dataset
+
+def rgb2gray(rgb):
+  return np.dot(rgb[...,:3], [0.2989, 0.5870, 0.1140])
+
+def extract_patch(image, center, size):
+  result = np.arange(size*size).reshape(size,size)
+  xStart = int(center[0]-size/2)
+  yStart = int(center[1]-size/2)
+  for x in range(size):
+    for y in range(size):
+      result[x][y] = image[xStart + x][yStart + y]
+  return result
+
+class KITTI2015Dataset(Dataset):
+  def __init__(self,path="../datasets/KITTI2015"):
+    self.training_path = path+"/training"
+    self.testing_path = path+"/testing"
+    self.patch_size = 16
+    self.channels = 1
+    self.neg_offset = 8
+    self.samplesPerImage = 16
+
+    self.patches = list()
+    self.labels = list()
+
+  
+  def __getitem__(self, index):
+    patches, label = self.prepare_image(str(index).zfill(6)+"_10")
+    return (patches, label)
+
+  def __len__(self):
+    return 200 #len(self.patches)
+
+  def prepare_image(self, index):
+    # load images
+    X_left = rgb2gray(imageio.imread(self.training_path + "/image_2/" + index + ".png"))
+    X_right = rgb2gray(imageio.imread(self.training_path + "/image_3/" + index + ".png"))
+    D = imageio.imread(self.training_path + "/disp_noc_0/" + index + ".png")
+    D = D/256 # Normalize to 0-255
+
+    width = X_left.shape[1]
+    height = X_left.shape[0]
+
+    # Helper vars to determine if a patch is inside the image
+    min_x = self.patch_size
+    max_x = width-self.patch_size
+    min_y = self.patch_size
+    max_y = height-self.patch_size
+
+    for i in range(int(self.samplesPerImage)):
+      is_neg = (i%2 == 0) #is negative example
+
+      # Calculate what pixel we want to use
+      x = int(rng.uniform(min_x, max_x))
+      y = int(rng.uniform(min_y, max_y))
+      offset = 0
+      if is_neg:
+        offset = rng.uniform(self.neg_offset, self.neg_offset*2)
+
+      # The ground truth disparity at the pixel
+      d = D[y,x]
+
+      if is_neg and x-d+offset > max_x:
+        offset = -offset
+
+      # Extract patches from images
+      L = torch.from_numpy( extract_patch(X_left,  (y, x),   self.patch_size) ).reshape( 1, 16, 16 ).type('torch.FloatTensor')
+      R = torch.from_numpy( extract_patch(X_right, (y, x-d), self.patch_size) ).reshape( 1, 16, 16 ).type('torch.FloatTensor')
+
+
+      if is_neg:
+        label = torch.FloatTensor([0.0, 1.0])
+      else:
+        lebel = torch.FloatTensor([1.0, 0.0])
+
+      return (L,R), label
