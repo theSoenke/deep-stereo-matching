@@ -5,7 +5,6 @@ import time
 import numpy as np
 import torch
 from torch import nn, optim
-from torch.functional import F
 from torch.optim.lr_scheduler import MultiStepLR
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -61,13 +60,15 @@ train_dataset = StereoDataset(
     util_root=args.preprocess,
     data_root=args.data,
     filename='tr_160_18_100.bin',
-    max_samples= 40000 * 128,
+    start_sample=0,
+    num_samples=40000 * 128
 )
 val_dataset = StereoDataset(
     util_root=args.preprocess,
     data_root=args.data,
     filename='val_40_18_100.bin',
-    num_val_loc=256,
+    start_sample=0,
+    num_samples=1000,
 )
 
 train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)

@@ -10,12 +10,12 @@ from torch.utils.data import Dataset
 
 
 class StereoDataset(Dataset):
-    def __init__(self, util_root, data_root, filename, num_val_loc=100, max_samples=-1):
+    def __init__(self, util_root, data_root, filename, start_sample=0, num_samples=-1):
         self.util_root = util_root
         self.data_root = data_root
         self.filename = filename
-        self.num_val_loc = num_val_loc
-        self.max_samples = max_samples
+        self.start_sample = start_sample
+        self.num_samples = num_samples
 
         fn = filename.split("_")
         fn[-1] = fn[-1].split(".")[0]
@@ -48,15 +48,13 @@ class StereoDataset(Dataset):
         return {'left': l_patch, 'right': r_patch}
 
 
-    def load(self, shuffle=True, bin_filename="myPerm.bin"):
+    def load(self, bin_filename="myPerm.bin"):
         bin_path = os.path.join(self.util_root, bin_filename)
         self.file_ids = np.fromfile(bin_path, '<f4').astype(int)
         data_path = os.path.join(self.util_root, self.filename)
         self.pixel_loc = np.fromfile(data_path, '<f4').reshape(-1, 5).astype(np.int)
         self.pixel_loc[:, 2:5] = self.pixel_loc[:, 2:5] - 1
-        self.pixel_loc = self.pixel_loc[:self.max_samples]
-        if shuffle:
-            np.random.shuffle(self.pixel_loc)
+        self.pixel_loc = self.pixel_loc[self.start_sample:][:self.num_samples]
 
         self.ldata, self.rdata = {}, {}
         # TODO only load train or val samples
@@ -64,8 +62,6 @@ class StereoDataset(Dataset):
             fn = self.file_ids[idx]
             self.ldata[fn], self.rdata[fn] = self.load_sample(fn)
 
-        if self.data_split == "val":
-            self.pixel_loc = self.pixel_loc[:self.num_val_loc]
 
     def preprocess_image(self, img):
         img -= img.mean(axis=(0, 1))
