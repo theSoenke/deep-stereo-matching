@@ -11,6 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 from data import StereoDataset
 from model import Model
+from utils import loss_function, pixel_accuracy
 
 learning_rate = 1e-2
 half_range = 100
@@ -30,22 +31,6 @@ checkpoint = args.checkpoint
 torch.manual_seed(42)
 np.random.seed(42)
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-
-def loss_function(pred, target, weights):
-    error = 0
-    for i in range(pred.size(0)):
-        pred_compare = pred[i, target[i][0]-2:target[i][0]+2+1]
-        loss = torch.mul(pred_compare, weights).sum()
-        error = error - loss
-
-    return error / pred.size(0)
-
-
-def pixel_accuracy(pred, target, pixel=3):
-    pred, _ = pred.max(dim=1)
-    pred = pred.abs()
-    return pred[pred <= pixel].shape[0] / pred.size(0)
 
 
 writer = SummaryWriter()
