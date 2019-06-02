@@ -11,7 +11,6 @@ from data import StereoDataset
 from model import Model
 from utils import loss_function, pixel_accuracy
 
-learning_rate = 1e-2
 half_range = 100
 
 parser = argparse.ArgumentParser()
@@ -32,7 +31,6 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 model = Model(3, half_range*2+1).to(device)
 model.load_state_dict(torch.load(checkpoint))
-optimizer = optim.Adagrad(model.parameters(), lr=learning_rate, weight_decay=0.0005)
 test_dataset = StereoDataset(
     util_root=args.preprocess,
     data_root=args.data,
@@ -43,7 +41,7 @@ test_dataset = StereoDataset(
 
 test_data = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 class_weights = torch.Tensor([1, 4, 10, 4, 1]).to(device)
-targets = np.tile(half_range, (batch_size, 1))
+targets = np.tile(half_range + 1, (batch_size, 1))
 target_batch = torch.tensor(targets, dtype=torch.int32)
 
 
@@ -59,11 +57,9 @@ for batch in test_data:
 
     _, _, pred = model(left_img, right_img)
     loss = loss_function(pred, target, class_weights)
-    optimizer.zero_grad()
-
     acc = pixel_accuracy(pred, target, pixel=pixel_dist)
     losses = np.append(losses, loss.item())
-    accuracies = np.append(accuracies, acc)
+    accuracies = np.append(accuracies, acc.item())
 
 avg_loss = np.mean(losses)
 avg_acc = np.mean(accuracies)

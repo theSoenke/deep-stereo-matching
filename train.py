@@ -60,7 +60,7 @@ train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_
 val_data = DataLoader(val_dataset, batch_size=batch_size * 2, shuffle=False, num_workers=4)
 class_weights = torch.Tensor([1, 4, 10, 4, 1]).to(device)
 samples = len(train_dataset)
-targets = np.tile(half_range, (batch_size, 1))
+targets = np.tile(half_range + 1, (batch_size, 1))
 target_batch = torch.tensor(targets, dtype=torch.int32)
 
 
@@ -86,7 +86,7 @@ def train(epoch):
 
         acc = pixel_accuracy(pred, target, pixel=2)
         losses = np.append(losses, loss.item())
-        accuracies = np.append(accuracies, acc)
+        accuracies = np.append(accuracies, acc.item())
         writer.add_scalar("train_loss", loss, global_step=step)
         writer.add_scalar("train_acc", acc, global_step=step)
         writer.add_scalar("learning_rate", scheduler.get_lr()[0], global_step=step)
@@ -116,7 +116,7 @@ def evaluate(epoch):
 
         acc = pixel_accuracy(pred, target, pixel=2)
         losses = np.append(losses, loss.item())
-        accuracies = np.append(accuracies, acc)
+        accuracies = np.append(accuracies, acc.item())
 
     step = (epoch + 1) * samples
     avg_loss = np.mean(losses)
