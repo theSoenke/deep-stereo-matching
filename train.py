@@ -67,6 +67,7 @@ target_batch = torch.tensor(targets, dtype=torch.int32)
 def train(epoch):
     losses = np.array([])
     accuracies = np.array([])
+    times = np.array([])
 
     step = epoch * samples
     for batch in train_data:
@@ -86,16 +87,20 @@ def train(epoch):
 
         acc = pixel_accuracy(pred, target, pixel=2)
         losses = np.append(losses, loss.item())
-        accuracies = np.append(accuracies, acc.item())
+        accuracies = np.append(accuracies, acc)
+        times = np.append(times, time.time() - start_time)
+
         writer.add_scalar("train_loss", loss, global_step=step)
         writer.add_scalar("train_acc", acc, global_step=step)
         writer.add_scalar("learning_rate", scheduler.get_lr()[0], global_step=step)
+
         if step % 50 == 0:
-            avg_time = ((time.time() - start_time) * 1000) / 50
             epoch_samples = (batch_size * (step // (epoch + 1)))
-            print("%d/%d samples, train_acc: %f, train_loss: %f, Time per batch: %fms" % (epoch_samples, samples, np.mean(accuracies), np.mean(losses), avg_time))
+            mean_time = np.mean(times) * 1000
+            print("%d/%d samples, train_acc: %f, train_loss: %f, Time per batch: %fms" % (epoch_samples, samples, np.mean(accuracies), np.mean(losses), mean_time))
             losses = np.array([])
             accuracies = np.array([])
+            times = np.array([])
 
         if step % 500 == 0:
             torch.save(model.state_dict(), checkpoint)
@@ -116,7 +121,7 @@ def evaluate(epoch):
 
         acc = pixel_accuracy(pred, target, pixel=2)
         losses = np.append(losses, loss.item())
-        accuracies = np.append(accuracies, acc.item())
+        accuracies = np.append(accuracies, acc)
 
     step = (epoch + 1) * samples
     avg_loss = np.mean(losses)

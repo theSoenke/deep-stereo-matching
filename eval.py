@@ -59,7 +59,7 @@ for batch in test_data:
     loss = loss_function(pred, target, class_weights)
     acc = pixel_accuracy(pred, target, pixel=pixel_dist)
     losses = np.append(losses, loss.item())
-    accuracies = np.append(accuracies, acc.item())
+    accuracies = np.append(accuracies, acc)
 
 avg_loss = np.mean(losses)
 avg_acc = np.mean(accuracies)
