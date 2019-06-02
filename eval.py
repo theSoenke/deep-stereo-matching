@@ -36,7 +36,7 @@ test_dataset = StereoDataset(
     data_root=args.data,
     filename='tr_160_18_100.bin',
     start_sample=40000 * 128,
-    num_samples=50000,
+    num_samples=64000,
 )
 
 test_data = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
