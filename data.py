@@ -19,15 +19,13 @@ class StereoDataset(Dataset):
 
         fn = filename.split("_")
         fn[-1] = fn[-1].split(".")[0]
-        data_split, num_images, psz, half_range = [fn[0]] + [int(x) for x in fn[1:]]
+        num_images, psz, half_range = [int(x) for x in fn[1:]]
         self.num_images = num_images
-        self.data_split = data_split
         self.half_range = half_range
         self.psz = psz
 
         print("Loading dataset..")
         self.load()
-
 
     def __len__(self):
         return self.pixel_loc.shape[0]
@@ -45,8 +43,7 @@ class StereoDataset(Dataset):
         r_patch = torch.from_numpy(r_patch)
         r_patch = r_patch.permute(2, 0, 1)
 
-        return {'left': l_patch, 'right': r_patch}
-
+        return {'left': l_patch, 'right': r_patch, 'target': torch.tensor([self.half_range + 1], dtype=torch.long)}
 
     def load(self, bin_filename="myPerm.bin"):
         bin_path = os.path.join(self.util_root, bin_filename)
@@ -61,7 +58,6 @@ class StereoDataset(Dataset):
         for idx in range(len(self.file_ids)):
             fn = self.file_ids[idx]
             self.ldata[fn], self.rdata[fn] = self.load_sample(fn)
-
 
     def preprocess_image(self, img):
         img -= img.mean(axis=(0, 1))

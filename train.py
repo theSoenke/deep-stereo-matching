@@ -53,15 +53,13 @@ val_dataset = StereoDataset(
     data_root=args.data,
     filename='val_40_18_100.bin',
     start_sample=0,
-    num_samples=1000,
+    num_samples=1280,
 )
 
 train_data = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 val_data = DataLoader(val_dataset, batch_size=batch_size * 2, shuffle=False, num_workers=4)
 class_weights = torch.Tensor([1, 4, 10, 4, 1]).to(device)
 samples = len(train_dataset)
-targets = np.tile(half_range + 1, (batch_size, 1))
-target_batch = torch.tensor(targets, dtype=torch.int32)
 
 
 def train(epoch):
@@ -76,7 +74,7 @@ def train(epoch):
 
         left_img = batch['left'].to(device)
         right_img = batch['right'].to(device)
-        target = target_batch.to(device)
+        target = batch['target'].to(device)
 
         _, _, pred = model(left_img, right_img)
         loss = loss_function(pred, target, class_weights)

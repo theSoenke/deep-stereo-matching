@@ -34,16 +34,13 @@ model.load_state_dict(torch.load(checkpoint))
 test_dataset = StereoDataset(
     util_root=args.preprocess,
     data_root=args.data,
-    filename='tr_160_18_100.bin',
-    start_sample=40000 * 128,
-    num_samples=64000,
+    filename='val_40_18_100.bin',
+    start_sample=1280,
+    num_samples=2859136,
 )
 
 test_data = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 class_weights = torch.Tensor([1, 4, 10, 4, 1]).to(device)
-targets = np.tile(half_range + 1, (batch_size, 1))
-target_batch = torch.tensor(targets, dtype=torch.int32)
-
 
 print("%d test samples" % len(test_dataset))
 
@@ -53,7 +50,7 @@ accuracies = np.array([])
 for batch in test_data:
     left_img = batch['left'].to(device)
     right_img = batch['right'].to(device)
-    target = target_batch.to(device)
+    target = batch['target'].to(device)
 
     _, _, pred = model(left_img, right_img)
     loss = loss_function(pred, target, class_weights)

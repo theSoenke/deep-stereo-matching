@@ -14,7 +14,5 @@ def loss_function(pred, target, weights):
 def pixel_accuracy(pred, target, pixel=3):
     _, indices = pred.max(dim=1)
     target = target.squeeze(dim=1)
-    target = target.type(torch.long)
     pred = (indices-target).abs()
-    batch_size = pred.size(0)
-    return pred[pred <= pixel].shape[0] / batch_size
+    return pred[pred <= pixel].shape[0] / pred.size(0)
