@@ -21,12 +21,11 @@ parser.add_argument("--data", type=str, default='data/training')
 parser.add_argument("--preprocess", type=str, default='preprocess/debug_15')
 parser.add_argument("--checkpoint", type=str, default='checkpoint.pkl')
 parser.add_argument("--batch_size", type=int, default=128)
-parser.add_argument("--epochs", type=int, default=10)
+parser.add_argument("--epochs", type=int, default=1)
 args = parser.parse_args()
 
 batch_size = args.batch_size
 epochs = args.epochs
-checkpoint = args.checkpoint
 
 torch.manual_seed(42)
 np.random.seed(42)
@@ -63,10 +62,7 @@ samples = len(train_dataset)
 
 
 def train(epoch):
-    losses = np.array([])
-    accuracies = np.array([])
-    times = np.array([])
-
+    losses, accuracies, batch_times = np.array([]), np.array([]), np.array([])
     step = epoch * samples
     for batch in train_data:
         start_time = time.time()
@@ -86,7 +82,7 @@ def train(epoch):
         acc = pixel_accuracy(pred, target, pixel=2)
         losses = np.append(losses, loss.item())
         accuracies = np.append(accuracies, acc)
-        times = np.append(times, time.time() - start_time)
+        batch_times = np.append(batch_times, time.time() - start_time)
 
         writer.add_scalar("train_loss", loss, global_step=step)
         writer.add_scalar("train_acc", acc, global_step=step)
@@ -94,28 +90,25 @@ def train(epoch):
 
         if step % 50 == 0:
             epoch_samples = (batch_size * (step // (epoch + 1)))
-            mean_time = np.mean(times) * 1000
+            mean_time = np.mean(batch_times) * 1000
             print("%d/%d samples, train_acc: %f, train_loss: %f, Time per batch: %fms" % (epoch_samples, samples, np.mean(accuracies), np.mean(losses), mean_time))
-            losses = np.array([])
-            accuracies = np.array([])
-            times = np.array([])
+            losses, accuracies, batch_times = np.array([]), np.array([]), np.array([])
 
         if step % 500 == 0:
-            torch.save(model.state_dict(), checkpoint)
+            torch.save(model.state_dict(), args.checkpoint)
             print("Created checkpoint")
 
 
+@torch.no_grad()
 def evaluate(epoch):
-    losses = np.array([])
-    accuracies = np.array([])
+    losses, accuracies = np.array([]), np.array([])
     for batch in val_data:
         left_img = batch['left'].to(device)
         right_img = batch['right'].to(device)
-        target = target_batch.to(device)
+        target = batch['target'].to(device)
 
         _, _, pred = model(left_img, right_img)
         loss = loss_function(pred, target, class_weights)
-        optimizer.zero_grad()
 
         acc = pixel_accuracy(pred, target, pixel=2)
         losses = np.append(losses, loss.item())
@@ -129,6 +122,8 @@ def evaluate(epoch):
     print("Evaluation: val_acc: %f, val_loss: %f" % (avg_acc, avg_loss))
 
 
+trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print("Trainable parameters: %d" % trainable_params)
 for epoch in range(epochs):
     model.train()
     train(epoch)
@@ -138,4 +133,4 @@ for epoch in range(epochs):
 
     print("Finished epoch %d" % epoch)
 
-torch.save(model.state_dict(), checkpoint)
+torch.save(model.state_dict(), args.checkpoint)
